@@ -65,7 +65,6 @@ jobs:
           echo "Building catalog image..."
           docker build \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
-           
             -f $SERVICE_PATH/Dockerfile \
             $SERVICE_PATH
 
