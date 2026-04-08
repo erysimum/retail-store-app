@@ -83,4 +83,4 @@ docker compose down
 
 
 echo "" >> src/catalog/README.md
-echo "<!-- Pipeline test $(date) -->" >> src/catalog/README.md
+echo "<!-- Pipeline test $(date) -->" >> src/catalog/README.md< pipeline test 2 -->
