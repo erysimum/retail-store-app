@@ -1,0 +1,87 @@
+# =============================================================================
+# CI PIPELINE — Build and push catalog service image to ECR
+# =============================================================================
+# TRIGGERS: Push to main branch (only when catalog code changes)
+# OUTPUT: Docker image pushed to ECR tagged with git SHA
+#
+# FLOW:
+#   1. Checkout code
+#   2. Configure AWS credentials
+#   3. Login to ECR
+#   4. Build Docker image
+#   5. Tag with git SHA (immutable, traceable)
+#   6. Push to ECR
+# =============================================================================
+
+name: Build Catalog Service
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/catalog/**'
+      - '.github/workflows/build-catalog.yml'
+  workflow_dispatch:  # manual trigger for testing
+
+env:
+  AWS_REGION: ap-southeast-2
+  ECR_REPOSITORY: retail-store/catalog
+  SERVICE_PATH: src/catalog
+
+jobs:
+  build-and-push:
+    name: Build & Push Image
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write   # needed for OIDC auth with AWS
+      contents: read     # needed to checkout code
+
+    steps:
+      # --- Step 1: Get the code ---
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # --- Step 2: Configure AWS credentials via OIDC ---
+      # WHY OIDC: No long-lived AWS keys stored in GitHub.
+      # GitHub proves its identity to AWS, AWS gives temporary credentials.
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # --- Step 3: Login to ECR ---
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # --- Step 4: Build, tag, and push ---
+      - name: Build, tag, and push image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: sha-${{ github.sha }}
+        run: |
+          echo "Building catalog image..."
+          docker build \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
+            -f $SERVICE_PATH/Dockerfile \
+            $SERVICE_PATH
+
+          echo "Pushing to ECR..."
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+          echo "✅ Pushed: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+      # --- Step 5: Output summary ---
+      - name: Summary
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: sha-${{ github.sha }}
+        run: |
+          echo "### 🚀 Image Published" >> $GITHUB_STEP_SUMMARY
+          echo "**Repository:** $ECR_REGISTRY/$ECR_REPOSITORY" >> $GITHUB_STEP_SUMMARY
+          echo "**Tag:** $IMAGE_TAG" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
