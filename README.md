@@ -1,3 +1,19 @@
+## Part of the Retail Store Platform project
+
+This is a fork of [aws-containers/retail-store-sample-app](https://github.com/aws-containers/retail-store-sample-app),
+used as the workload for a self-built EKS platform. The platform engineering —
+infrastructure, cluster policies, GitOps, observability, and chaos testing —
+lives in three sibling repos:
+
+- **[retail-store-infra](https://github.com/erysimum/retail-store-infra)** — Terraform: VPC, EKS, ECR, observability stack *(start here)*
+- **[retail-store-platform](https://github.com/erysimum/retail-store-platform)** — Kustomize cluster policies (RBAC, NetworkPolicy, quotas)
+- **[retail-store-gitops](https://github.com/erysimum/retail-store-gitops)** — Helm chart, ArgoCD config, SLOs, dashboards, fault injection
+
+The services here are deployed onto the cluster by the gitops repo's Helm chart.
+Everything below this line is the original upstream documentation.
+
+---
+
 ![Banner](./docs/images/banner.png)
 
 <div align="center">
